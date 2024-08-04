@@ -22,7 +22,7 @@ class TaskGenerator:
         """ Load task configuration from config file. """
         self.tasks = None
 
-        file = os.path.join(os.path.dirname(__file__), 'tasks.json')
+        file = os.path.join(os.path.dirname(__file__), 'tasks.yaml')
 
         if config:
             file = os.path.join(config)
