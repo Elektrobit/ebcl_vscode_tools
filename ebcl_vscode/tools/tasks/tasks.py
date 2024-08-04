@@ -18,17 +18,26 @@ class TaskGenerator:
 
     tasks: Optional[dict[str, Any]]
 
-    def __init__(self, config='tasks.yaml'):
+    def __init__(self, config: Optional[str] = None):
         """ Load task configuration from config file. """
-        self.config = config
+        file = os.path.join(os.path.dirname(__file__), 'tasks.json')
+
+        if config:
+            file = os.path.join(config)
+
         self.tasks = None
 
-        self.config = load_yaml(config_file=config)
-        logging.debug('Task conifg: %s', self.config)
+        self.config = load_yaml(config_file=file)
+        logging.debug('Task config: %s', self.config)
 
-    def load_tasks(self, file='tasks.json'):
+    def load_tasks(self, template: Optional[str] = None):
         """ Load the base tasks.json file. """
-        file = os.path.join(os.path.dirname(__file__), file)
+        file = os.path.join(os.path.dirname(__file__), 'tasks.json')
+
+        if template:
+            workspace = self.config.get('workspace', '/workspace')
+            file = os.path.join(workspace, template)
+
         with open(file, 'r', encoding='utf-8') as tasks_file:
             self.tasks = json.load(tasks_file)
 
@@ -107,19 +116,27 @@ class TaskGenerator:
                             description=str(task['desc'])
                         )
 
-    def save_tasks(self):
+    def save_tasks(self, output: Optional[str] = None):
         """ Update VS Code tasks file. """
+        out = '.vscode/tasks.json'
+        if output:
+            out = output
+
         workspace = self.config.get('workspace', '/workspace')
-        file = os.path.join(workspace, '.vscode/tasks.json')
+        file = os.path.join(workspace, out)
 
         with open(file, 'w', encoding='utf-8') as tasks_file:
             json.dump(self.tasks, tasks_file, indent=4)
 
-    def genenrate_tasks(self):
+    def genenrate_tasks(
+            self,
+            output: Optional[str] = None,
+            template: Optional[str] = None
+    ):
         """ Generate tasks.json. """
-        self.load_tasks()
+        self.load_tasks(template=template)
         self.generate_image_tasks()
-        self.save_tasks()
+        self.save_tasks(output=output)
 
 
 def main() -> None:
@@ -128,7 +145,7 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(
         description='Generate VS Code build task for images.')
-    parser.add_argument('config', type=str,
+    parser.add_argument('-c', '--config', type=str,
                         help='Path to the YAML configuration file.')
     parser.add_argument('-o', '--output', type=str,
                         help='Path to the output directory')
