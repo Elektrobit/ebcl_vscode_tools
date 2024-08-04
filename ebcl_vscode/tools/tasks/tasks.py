@@ -68,13 +68,23 @@ class TaskGenerator:
 
         self.tasks['tasks'].append(task)
 
+    def _is_ignored(self, path: str) -> bool:
+        """ Test if file is ignored. """
+        ignore = self.config.get('ignore', [])
+
+        for ign in ignore:
+            if ign in path:
+                return True
+        
+        return False
+
     def generate_image_tasks(self):
         """ Generate build tasks for all images and sysroots. """
         assert self.config
 
         workspace = self.config.get('workspace', '/workspace')
         folders = self.config.get('folders', [])
-        ignore = self.config.get('ignore', [])
+        
 
         logging.info('Generating tasks (w: %s, f: %s, i: %s)...',
                      workspace, folders, ignore)
@@ -89,10 +99,9 @@ class TaskGenerator:
                 continue
 
             for root, _dir, files in os.walk(folder):
-                for ign in ignore:
-                    if ign in root:
-                        logging.info('Folder %s is ignored.', root)
-                        continue
+                if self._is_ignored(root):
+                    logging.info('Folder %s is ignored.', root)
+                    continue
 
                 for file in files:
                     if file != 'Makefile':
@@ -100,10 +109,9 @@ class TaskGenerator:
 
                     file = os.path.join(root, file)
 
-                    for ign in ignore:
-                        if ign in file:
-                            logging.info('File %s is ignored.', file)
-                            continue
+                    if self._is_ignored(file):
+                        logging.info('File %s is ignored.', file)
+                        continue
 
                     logging.debug('Processing file %s...', file)
 
