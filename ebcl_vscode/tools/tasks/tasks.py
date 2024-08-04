@@ -20,15 +20,16 @@ class TaskGenerator:
 
     def __init__(self, config: Optional[str] = None):
         """ Load task configuration from config file. """
+        self.tasks = None
+
         file = os.path.join(os.path.dirname(__file__), 'tasks.json')
 
         if config:
             file = os.path.join(config)
 
-        self.tasks = None
+        logging.info('Using task config %s...', file)
 
         self.config = load_yaml(config_file=file)
-        logging.debug('Task config: %s', self.config)
 
     def load_tasks(self, template: Optional[str] = None):
         """ Load the base tasks.json file. """
@@ -38,12 +39,18 @@ class TaskGenerator:
             workspace = self.config.get('workspace', '/workspace')
             file = os.path.join(workspace, template)
 
+        logging.info('Using tasks.json template %s...', file)
+
         with open(file, 'r', encoding='utf-8') as tasks_file:
             self.tasks = json.load(tasks_file)
 
     def _add_task(self, name: str, command: str,
                   description: str, args: list[str]) -> None:
         """ Add a task to the tasks list. """
+
+        logging.debug('Adding task %s with command %s %s...',
+                      name, command, args)
+
         task: dict[str, Any] = dict()
         task['type'] = 'shell'
         task['label'] = f'EBcL: {name}'
@@ -76,16 +83,21 @@ class TaskGenerator:
 
             for root, _dir, files in os.walk(folder):
                 if root in ignore:
+                    logging.info('Folder %s is ignored.', root)
                     continue
 
                 for file in files:
                     if file != 'Makefile':
+                        logging.debug('File %s is not Makefile...', file)
                         continue
 
                     file = os.path.join(root, file)
 
                     if file in ignore:
+                        logging.info('File %s is ignored.', file)
                         continue
+
+                    logging.debug('Processing file %s...', file)
 
                     name = os.path.relpath(file, folder).replace('/', '_')
 
@@ -108,6 +120,8 @@ class TaskGenerator:
                             'desc': f'Run {name} in QEMU'
                         })
 
+                    logging.debug('Adding tasks %s...', tasks)
+
                     for task in tasks:
                         self._add_task(
                             name=str(task['name']),
@@ -125,6 +139,8 @@ class TaskGenerator:
         workspace = self.config.get('workspace', '/workspace')
         file = os.path.join(workspace, out)
 
+        logging.info('Writing tasks.json to %s.', file)
+
         with open(file, 'w', encoding='utf-8') as tasks_file:
             json.dump(self.tasks, tasks_file, indent=4)
 
@@ -134,6 +150,9 @@ class TaskGenerator:
             template: Optional[str] = None
     ):
         """ Generate tasks.json. """
+
+        logging.info('Generating tasks (o: %s, t: %s)...', output, template)
+
         self.load_tasks(template=template)
         self.generate_image_tasks()
         self.save_tasks(output=output)
