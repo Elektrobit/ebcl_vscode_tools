@@ -116,7 +116,7 @@ class TaskGenerator:
 
                     logging.debug('Processing file %s...', file)
 
-                    name = os.path.relpath(file, folder).replace('/', '_')
+                    name = os.path.relpath(root, folder)
 
                     tasks = [
                         {
