@@ -31,6 +31,8 @@ class TaskGenerator:
 
         self.config = load_yaml(config_file=file)
 
+        logging.debug('Config: %s', self.config)
+
     def load_tasks(self, template: Optional[str] = None):
         """ Load the base tasks.json file. """
         file = os.path.join(os.path.dirname(__file__), 'tasks.json')
@@ -74,8 +76,13 @@ class TaskGenerator:
         folders = self.config.get('folders', [])
         ignore = self.config.get('ignore', [])
 
+        logging.info('Generating tasks (w: %s, f: %s, i: %s)...',
+                     workspace, folders, ignore)
+
         for folder in folders:
             folder = os.path.abspath(os.path.join(workspace, folder))
+
+            logging.info('Processing folder %s...', folder)
 
             if not os.path.isdir(folder):
                 logging.error('Image folder %s not found!', folder)
