@@ -89,20 +89,21 @@ class TaskGenerator:
                 continue
 
             for root, _dir, files in os.walk(folder):
-                if root in ignore:
-                    logging.info('Folder %s is ignored.', root)
-                    continue
+                for ign in ignore:
+                    if ign in root:
+                        logging.info('Folder %s is ignored.', root)
+                        continue
 
                 for file in files:
                     if file != 'Makefile':
-                        logging.debug('File %s is not Makefile...', file)
                         continue
 
                     file = os.path.join(root, file)
 
-                    if file in ignore:
-                        logging.info('File %s is ignored.', file)
-                        continue
+                    for ign in ignore:
+                        if ign in file:
+                            logging.info('File %s is ignored.', file)
+                            continue
 
                     logging.debug('Processing file %s...', file)
 
