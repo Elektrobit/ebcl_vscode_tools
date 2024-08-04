@@ -74,6 +74,8 @@ class TaskGenerator:
 
         for ign in ignore:
             if ign in path:
+                logging.info('Path %s is ignored. (%s)...',
+                             path, ignore)
                 return True
         
         return False
@@ -83,11 +85,10 @@ class TaskGenerator:
         assert self.config
 
         workspace = self.config.get('workspace', '/workspace')
-        folders = self.config.get('folders', [])
-        
+        folders = self.config.get('folders', [])    
 
-        logging.info('Generating tasks (w: %s, f: %s, i: %s)...',
-                     workspace, folders, ignore)
+        logging.info('Generating tasks (w: %s, f: %s)...',
+                     workspace, folders)
 
         for folder in folders:
             folder = os.path.abspath(os.path.join(workspace, folder))
