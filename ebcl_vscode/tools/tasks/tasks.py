@@ -18,23 +18,41 @@ class TaskGenerator:
 
     tasks: Optional[dict[str, Any]]
 
-    def __init__(self, config='tasks.yaml'):
+    def __init__(self, config: Optional[str] = None):
         """ Load task configuration from config file. """
-        self.config = config
         self.tasks = None
 
-        self.config = load_yaml(config_file=config)
-        logging.debug('Task conifg: %s', self.config)
+        file = os.path.join(os.path.dirname(__file__), 'tasks.yaml')
 
-    def load_tasks(self, file='tasks.json'):
+        if config:
+            file = os.path.join(config)
+
+        logging.info('Using task config %s...', file)
+
+        self.config = load_yaml(config_file=file)
+
+        logging.debug('Config: %s', self.config)
+
+    def load_tasks(self, template: Optional[str] = None):
         """ Load the base tasks.json file. """
-        file = os.path.join(os.path.dirname(__file__), file)
+        file = os.path.join(os.path.dirname(__file__), 'tasks.json')
+
+        if template:
+            workspace = self.config.get('workspace', '/workspace')
+            file = os.path.join(workspace, template)
+
+        logging.info('Using tasks.json template %s...', file)
+
         with open(file, 'r', encoding='utf-8') as tasks_file:
             self.tasks = json.load(tasks_file)
 
     def _add_task(self, name: str, command: str,
                   description: str, args: list[str]) -> None:
         """ Add a task to the tasks list. """
+
+        logging.debug('Adding task %s with command %s %s...',
+                      name, command, args)
+
         task: dict[str, Any] = dict()
         task['type'] = 'shell'
         task['label'] = f'EBcL: {name}'
@@ -50,23 +68,40 @@ class TaskGenerator:
 
         self.tasks['tasks'].append(task)
 
+    def _is_ignored(self, path: str) -> bool:
+        """ Test if file is ignored. """
+        ignore = self.config.get('ignore', [])
+
+        for ign in ignore:
+            if ign in path:
+                logging.info('Path %s is ignored. (%s)...',
+                             path, ignore)
+                return True
+        
+        return False
+
     def generate_image_tasks(self):
         """ Generate build tasks for all images and sysroots. """
         assert self.config
 
         workspace = self.config.get('workspace', '/workspace')
-        folders = self.config.get('folders', [])
-        ignore = self.config.get('ignore', [])
+        folders = self.config.get('folders', [])    
+
+        logging.info('Generating tasks (w: %s, f: %s)...',
+                     workspace, folders)
 
         for folder in folders:
             folder = os.path.abspath(os.path.join(workspace, folder))
+
+            logging.info('Processing folder %s...', folder)
 
             if not os.path.isdir(folder):
                 logging.error('Image folder %s not found!', folder)
                 continue
 
             for root, _dir, files in os.walk(folder):
-                if root in ignore:
+                if self._is_ignored(root):
+                    logging.info('Folder %s is ignored.', root)
                     continue
 
                 for file in files:
@@ -75,10 +110,13 @@ class TaskGenerator:
 
                     file = os.path.join(root, file)
 
-                    if file in ignore:
+                    if self._is_ignored(file):
+                        logging.info('File %s is ignored.', file)
                         continue
 
-                    name = os.path.relpath(file, folder).replace('/', '_')
+                    logging.debug('Processing file %s...', file)
+
+                    name = os.path.relpath(root, folder)
 
                     tasks = [
                         {
@@ -99,6 +137,8 @@ class TaskGenerator:
                             'desc': f'Run {name} in QEMU'
                         })
 
+                    logging.debug('Adding tasks %s...', tasks)
+
                     for task in tasks:
                         self._add_task(
                             name=str(task['name']),
@@ -107,19 +147,32 @@ class TaskGenerator:
                             description=str(task['desc'])
                         )
 
-    def save_tasks(self):
+    def save_tasks(self, output: Optional[str] = None):
         """ Update VS Code tasks file. """
+        out = '.vscode/tasks.json'
+        if output:
+            out = output
+
         workspace = self.config.get('workspace', '/workspace')
-        file = os.path.join(workspace, '.vscode/tasks.json')
+        file = os.path.join(workspace, out)
+
+        logging.info('Writing tasks.json to %s.', file)
 
         with open(file, 'w', encoding='utf-8') as tasks_file:
             json.dump(self.tasks, tasks_file, indent=4)
 
-    def genenrate_tasks(self):
+    def genenrate_tasks(
+            self,
+            output: Optional[str] = None,
+            template: Optional[str] = None
+    ):
         """ Generate tasks.json. """
-        self.load_tasks()
+
+        logging.info('Generating tasks (o: %s, t: %s)...', output, template)
+
+        self.load_tasks(template=template)
         self.generate_image_tasks()
-        self.save_tasks()
+        self.save_tasks(output=output)
 
 
 def main() -> None:
@@ -128,7 +181,7 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(
         description='Generate VS Code build task for images.')
-    parser.add_argument('config', type=str,
+    parser.add_argument('-c', '--config', type=str,
                         help='Path to the YAML configuration file.')
     parser.add_argument('-o', '--output', type=str,
                         help='Path to the output directory')
