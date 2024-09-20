@@ -3,3 +3,5 @@ folders:
   - images
 ignore:
 - /kernel/
+- /example-old-images/
+- /user/

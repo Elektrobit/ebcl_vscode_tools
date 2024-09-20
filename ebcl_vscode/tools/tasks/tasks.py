@@ -7,8 +7,9 @@ import os
 
 from typing import Optional, Any
 
+import yaml
+
 from ebcl.common import init_logging, bug, promo
-from ebcl.common.config import load_yaml
 
 
 class TaskGenerator:
@@ -29,7 +30,8 @@ class TaskGenerator:
 
         logging.info('Using task config %s...', file)
 
-        self.config = load_yaml(config_file=file)
+        with open(file, encoding='utf-8') as f:
+            self.config = yaml.safe_load(f)
 
         logging.debug('Config: %s', self.config)
 
@@ -74,10 +76,10 @@ class TaskGenerator:
 
         for ign in ignore:
             if ign in path:
-                logging.info('Path %s is ignored. (%s)...',
-                             path, ignore)
+                logging.debug('Path %s is ignored. (%s)...',
+                              path, ignore)
                 return True
-        
+
         return False
 
     def generate_image_tasks(self):
@@ -85,7 +87,7 @@ class TaskGenerator:
         assert self.config
 
         workspace = self.config.get('workspace', '/workspace')
-        folders = self.config.get('folders', [])    
+        folders = self.config.get('folders', [])
 
         logging.info('Generating tasks (w: %s, f: %s)...',
                      workspace, folders)
@@ -101,7 +103,7 @@ class TaskGenerator:
 
             for root, _dir, files in os.walk(folder):
                 if self._is_ignored(root):
-                    logging.info('Folder %s is ignored.', root)
+                    logging.debug('Folder %s is ignored.', root)
                     continue
 
                 for file in files:
