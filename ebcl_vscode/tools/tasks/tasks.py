@@ -48,7 +48,7 @@ class TaskGenerator:
         with open(file, 'r', encoding='utf-8') as tasks_file:
             self.tasks = json.load(tasks_file)
 
-    def _add_task(self, name: str, command: str,
+    def _add_task(self, name: str, cwd: str, command: str,
                   description: str, args: list[str]) -> None:
         """ Add a task to the tasks list. """
 
@@ -63,6 +63,9 @@ class TaskGenerator:
         task['group'] = {
             'kind': 'build',
             'isDefault': True
+        }
+        task['options'] = {
+            'cwd': cwd
         }
         task['detail'] = description
 
@@ -144,6 +147,7 @@ class TaskGenerator:
                     for task in tasks:
                         self._add_task(
                             name=str(task['name']),
+                            cwd=str(root),
                             args=list(task.get('args', [])),
                             command='make',
                             description=str(task['desc'])
